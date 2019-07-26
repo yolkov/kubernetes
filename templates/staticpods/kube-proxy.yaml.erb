@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-proxy
+  namespace: kube-system
+  # This annotation ensures that kube-proxy does not get evicted if the node
+  # supports critical pod annotation based priority scheme.
+  # Note that kube-proxy runs as a static pod so this annotation does NOT have
+  # any effect on rescheduler (default scheduler and rescheduler are not
+  # involved in scheduling kube-proxy).
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: ''
+  labels:
+    tier: node
+    component: kube-proxy
+spec:
+  hostNetwork: true
+  priorityClassName: system-node-critical
+  containers:
+    - name: kube-proxy
+      image: <%= @image %>:<%= @version %>
+      command:
+        - /hyperkube
+        - proxy
+        - --proxy-mode=<%= @mode %>
+        - --kubeconfig=/etc/kubernetes/kubeconfig.yaml
+        - --oom-score-adj=<%= @oom_score_adj %>
+      resources:
+        requests:
+          cpu: 200m
+      securityContext:
+        privileged: true
+      volumeMounts:
+      - name: certs-host
+        mountPath: /usr/share/ca-certificates
+        readOnly: true
+      - name: certs-etc
+        mountPath: /etc/ssl/certs
+        readOnly: true
+      - name: certs-kubernetes
+        mountPath: <%= scope['kubernetes::kube_pki_path'] %>
+        readOnly: true
+      - name: kubeconfig
+        mountPath: /etc/kubernetes/kubeconfig.yaml
+        readOnly: false
+      - name: iptableslock
+        mountPath: /run/xtables.lock
+        readOnly: false
+  volumes:
+  - name: certs-etc
+    hostPath:
+      path: /etc/ssl/certs
+  - name: certs-host
+    hostPath:
+      path: /usr/share/ca-certificates
+  - name: certs-kubernetes
+    hostPath:
+      path: <%= scope['kubernetes::kube_pki_path'] %>
+  - name: kubeconfig
+    hostPath:
+      path: <%= @kubeconfig %>
+  - name: iptableslock
+    hostPath:
+      path: /run/xtables.lock
+      type: FileOrCreate

@@ -1,0 +1,24 @@
+[Unit]
+Description=Kubernetes Kube Proxy
+Documentation=https://github.com/kubernetes/kubernetes
+
+[Service]
+ExecStart=/usr/local/bin/kube-proxy \
+  --kubeconfig=<%= @kubeconfig %>
+  <%- if @metrics_bind_address -%>
+  --metrics-bind-address=<%= @metrics_bind_address %> \
+  <%- end -%>
+  <%- if @conntrack_max_per_core -%>
+  --conntrack-max-per-core=<%= @conntrack_max_per_core %> \
+  <%- end -%>
+  <%- if @conntrack_min -%>
+  --conntrack-min=<%= @conntrack_min %> \
+  <%- end -%>
+  --proxy-mode=<%= @mode %> \
+  --oom-score-adj=<%= @oom_score_adj %> \
+
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

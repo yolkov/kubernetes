@@ -1,0 +1,11 @@
+---
+apiVersion: projectcalico.org/v3
+kind: BGPConfiguration
+metadata:
+  name: default
+spec:
+  logSeverityScreen: Info
+  nodeToNodeMeshEnabled: <%= @mesh_enabled %>
+  <%- if @as -%>
+  asNumber: <%= @as %>
+  <%- end -%>

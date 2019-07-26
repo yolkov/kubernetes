@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: ""
+  labels:
+    component: kube-scheduler
+    tier: control-plane
+  name: kube-scheduler
+  namespace: kube-system
+spec:
+  hostNetwork: true
+  priorityClassName: system-cluster-critical
+  containers:
+  - name: kube-scheduler
+    image: <%= @scheduler_image %>:<%= @scheduler_version %>
+    imagePullPolicy: IfNotPresent
+    command:
+    - kube-scheduler
+    <%- if @scheduler_feature_gates != [] -%>
+    - --feature-gates=<%= @scheduler_feature_gates.join(",") %>
+    <%- end -%>
+    <%- if @scheduler_kubeconfig -%>
+    - --kubeconfig=/etc/kubernetes/scheduler.conf
+    <%- else -%>
+    - --master=http://127.0.0.1:8080
+    <%- end -%>
+    - --leader-elect=true
+    <%- if @scheduler_http2_max_streams -%>
+    - --http2-max-streams-per-connection=<%= @scheduler_http2_max_streams %>
+    <%- end -%>
+    - --v=<%= @scheduler_verbose %>
+    livenessProbe:
+      failureThreshold: 8
+      httpGet:
+        host: 0.0.0.0
+        path: /healthz
+        port: 10251
+        scheme: HTTP
+      initialDelaySeconds: 15
+      timeoutSeconds: 15
+    resources:
+      requests:
+        cpu: 100m
+<%- if @scheduler_kubeconfig -%>
+    volumeMounts:
+    - name: kubeconfig
+      mountPath: /etc/kubernetes/scheduler.conf
+      readOnly: true
+    - name: k8s-certs
+      mountPath: /etc/kubernetes/pki
+      readOnly: true
+  volumes:
+  - name: k8s-certs
+    hostPath:
+      path: /etc/kubernetes/pki
+      type: DirectoryOrCreate
+  - name: kubeconfig
+    hostPath:
+      path: /etc/kubernetes/scheduler.conf
+      type: FileOrCreate
+<%- end -%>

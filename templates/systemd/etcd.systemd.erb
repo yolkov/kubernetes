@@ -1,0 +1,49 @@
+[Unit]
+Description=etcd
+Documentation=https://github.com/coreos/etcd
+Conflicts=etcd.service
+Conflicts=etcd2.service
+
+[Service]
+Type=notify
+Restart=always
+RestartSec=5s
+LimitNOFILE=40000
+TimeoutStartSec=0
+
+ExecStart=/usr/local/bin/etcd \
+    --name <%= @hostname %> \
+    --data-dir <%= scope['kubernetes::etcd_kube_datapath']  %> \
+    <%- if scope['kubernetes::etcd_kube_client_cert_auth'] then -%>
+    --cert-file=<%= scope['kubernetes::etcd_kube_cert_file'] %> \
+    --key-file=<%= scope['kubernetes::etcd_kube_key_file'] %> \
+    --client-cert-auth \
+    --trusted-ca-file=<%= scope['kubernetes::etcd_kube_trusted_ca_file'] %> \
+    --advertise-client-urls https://<%= @hostname %>:<%= scope['kubernetes::etcd_kube_clientport'] %> \
+    --listen-client-urls https://<%= @ipaddress %>:<%= scope['kubernetes::etcd_kube_clientport'] %>,http://127.0.0.1:<%= scope['kubernetes::etcd_kube_clientport'] %> \
+    <%- else -%>
+    --advertise-client-urls http://<%= @hostname %>:<%= scope['kubernetes::etcd_kube_clientport'] %> \
+    --listen-client-urls http://0.0.0.0:<%= scope['kubernetes::etcd_kube_clientport'] %> \
+    <%- end -%>
+    <%- if scope['kubernetes::etcd_kube_peer_client_cert_auth'] then -%>
+    --peer-cert-file=<%= scope['kubernetes::etcd_kube_peer_cert_file'] %> \
+    --peer-key-file=<%= scope['kubernetes::etcd_kube_peer_key_file'] %> \
+    --peer-client-cert-auth \
+    --peer-trusted-ca-file=<%= scope['kubernetes::etcd_kube_peer_trusted_ca_file'] %> \
+    --initial-advertise-peer-urls https://<%= @hostname %>:<%= scope['kubernetes::etcd_kube_peerport'] %> \
+    --listen-peer-urls https://<%= @ipaddress %>:<%= scope['kubernetes::etcd_kube_peerport'] %>,http://127.0.0.1:<%= scope['kubernetes::etcd_kube_peerport'] %> \
+    <%- else -%>
+    --initial-advertise-peer-urls http://<%= @hostname %>:<%= scope['kubernetes::etcd_kube_peerport'] %> \
+    --listen-peer-urls http://0.0.0.0:<%= scope['kubernetes::etcd_kube_peerport'] %> \
+    <%- end -%>
+    <%- if scope['kubernetes::etcd_kube_cluster_token'] then -%>
+    --initial-cluster <%= scope['kubernetes::etcd_kube_cluster'] %> \
+    --initial-cluster-token <%= scope['kubernetes::etcd_kube_cluster_token'] %> \
+    --initial-cluster-state new \
+    --heartbeat-interval=<%= scope['kubernetes::etcd_kube_heartbeat_interval'] %> \
+    --election-timeout=<%= scope['kubernetes::etcd_kube_election_timeout'] %> \
+    <%- end -%>
+    --snapshot-count=<%= scope['kubernetes::etcd_kube_snapshot_count'] %>
+
+[Install]
+WantedBy=multi-user.target

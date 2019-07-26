@@ -1,0 +1,40 @@
+[Unit]
+Description=Kubernetes Kubelet
+Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+<%- if scope['kubernetes::container_runtime'] == 'docker' -%>
+Wants=docker.socket docker.service
+After=docker.service docker.socket
+<%- end -%>
+
+[Service]
+ExecStart=<%= @kubelet_bin %> \
+  <%- unless scope['kubernetes::kube_master'] -%>
+  --bootstrap-kubeconfig=<%= scope['kubernetes::kubelet_kubeconfig_bootstrap'] %> \
+  <%- end -%>
+  --kubeconfig=<%= scope['kubernetes::kubelet_kubeconfig'] %> \
+  <%- if scope['kubernetes::container_runtime'] != 'docker' -%>
+  --container-runtime="<%= scope['kubernetes::container_runtime'] %>" \
+  <%- else -%>
+  --network-plugin=cni \
+  --cni-bin-dir=/opt/cni/bin \
+  --cni-conf-dir=/etc/cni/net.d \
+  <%- end -%>
+  --config=/var/lib/kubelet/config.yaml \
+  <%- if scope['kubernetes::kubelet_node_ip'] -%>
+  --node-ip=<%= scope['kubernetes::kubelet_node_ip'] %> \
+  <%- end -%>
+  <%- if scope['kubernetes::kubelet_register_with_taints'] -%>
+  --register-with-taints=<%= scope['kubernetes::kubelet_register_with_taints'].join(",") %> \
+  <%- end -%>
+  <%- if scope['kubernetes::kubelet_node_labels'] -%>
+  --node-labels <%= scope['kubernetes::kubelet_node_labels'].join(",") %> \
+  <%- end -%>
+  <%- if scope['kubernetes::kubelet_allowed_unsafe_sysctls'] -%>
+  --allowed-unsafe-sysctls <%= scope['kubernetes::kubelet_allowed_unsafe_sysctls'] %> \
+  <%- end -%>
+  --v=<%= scope['kubernetes::kubelet_verbose'] %>
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,8 @@
+---
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: bgppeer-<%= @index %>-global-<%= @as %>
+spec:
+  peerIP: <%= @rr_ip %>
+  asNumber: <%= @as %>

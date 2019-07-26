@@ -1,0 +1,188 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-apiserver
+  namespace: kube-system
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: ""
+  labels:
+    component: kube-apiserver
+    tier: control-plane
+spec:
+  priorityClassName: system-cluster-critical
+  hostNetwork: true
+  containers:
+  - name: kube-apiserver
+    image: <%= @apiserver_image %>:<%= @apiserver_version %>
+    imagePullPolicy: IfNotPresent
+    command:
+    - kube-apiserver
+    #Generig flags
+    <%- if @apiserver_advertise_address -%>
+    - --advertise-address=<%= @apiserver_advertise_address %>
+    <%- end -%>
+    <%- if @apiserver_feature_gates != [] -%>
+    - --feature-gates=<%= @apiserver_feature_gates.join(",") %>
+    <%- end -%>
+    <%- if @apiserver_max_requests_inflight -%>
+    - --max_requests_inflight=<%= @apiserver_max_requests_inflight %>
+    <%- end -%>
+    <%- if @apiserver_target_ram_mb -%>
+    - --target-ram-mb=<%= @apiserver_target_ram_mb %>
+    <%- end -%>
+    #Etcd flags
+    - --etcd-cafile=<%= @apiserver_etcd_cafile %>
+    - --etcd-certfile=<%= @apiserver_etcd_certfile %>
+    - --etcd-keyfile=<%= @apiserver_etcd_keyfile %>
+    - --etcd-servers=<%= @apiserver_etcd_servers %>
+    #Secure serving flags
+    <%- if @apiserver_bind_address -%>
+    - --bind-address=<%= @apiserver_bind_address %>
+    <%- end -%>
+    <%- if @apiserver_http2_max_streams -%>
+    - --http2-max-streams-per-connection=<%= @apiserver_http2_max_streams %>
+    <%- end -%>
+    - --secure-port=<%= @apiserver_secure_port %>
+    - --tls-cert-file=<%= @apiserver_tls_cert_file %>
+    - --tls-private-key-file=<%= @apiserver_tls_private_key_file %>
+    #Insecure serving flags
+    <%- if @apiserver_insecure_port -%>
+    - --insecure-port=<%= @apiserver_insecure_port %>
+    <%- end -%>
+    #Auditing flags
+    <%- if @apiserver_audit_policy_file -%>
+    - --audit-log-batch-buffer-size=<%= @apiserver_audit_log_batch_buffer_size %>
+    - --audit-log-batch-max-size=<%= @apiserver_audit_log_batch_max_size %>
+    <%- if @apiserver_audit_log_batch_max_wait -%>
+    - --audit-log-batch-max-wait=<%= @apiserver_audit_log_batch_max_wait %>
+    <%- end -%>
+    - --audit-log-maxage=<%= @apiserver_audit_log_maxage %>
+    - --audit-log-maxsize=<%= @apiserver_audit_log_maxsize %>
+    - --audit-log-mode=<%= @apiserver_audit_log_mode %>
+    - --audit-log-path=<%= @apiserver_audit_log_path %>/audit.log
+    - --audit-policy-file=<%= @apiserver_audit_policy_file %>
+    <%- end -%>
+    #Features flags
+    - --profiling=<%= @apiserver_profiling %>
+    - --enable-swagger-ui=<%= @apiserver_swagger_ui %>
+    #Authentication flags
+    - --anonymous-auth=<%= @apiserver_anonymous_auth %>
+    - --client-ca-file=<%= @apiserver_client_ca_file %>
+    <%- if @apiserver_bootstrap_token_auth -%>
+    - --enable-bootstrap-token-auth=<%= @apiserver_bootstrap_token_auth %>
+    <%- end -%>
+    <%- if @apiserver_oidc_issuer_url -%>
+      <%- if @apiserver_oidc_ca_file -%>
+    - --oidc-ca-file=<%= @apiserver_oidc_ca_file %>
+      <%- end -%>
+    - --oidc-client-id=<%= @apiserver_oidc_client_id %>
+    - --oidc-groups-claim=<%= @apiserver_oidc_groups_claim %>
+    - --oidc-issuer-url=<%= @apiserver_oidc_issuer_url %>
+    - --oidc-username-claim=<%= @apiserver_oidc_username_claim %>
+    <%- end -%>
+    #- --requestheader-allowed-names=front-proxy-client
+    #- --requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt
+    #- --requestheader-extra-headers-prefix=X-Remote-Extra-
+    #- --requestheader-group-headers=X-Remote-Group
+    #- --requestheader-username-headers=X-Remote-User
+    <%- if @apiserver_service_account_key_files -%>
+      <%- Array(@apiserver_service_account_key_files).each do |key| -%>
+    - --service-account-key-file=<%= key %>
+      <%- end -%>
+    <%- end -%>
+    #Authorization flags
+    - --authorization-mode=<%= @apiserver_authorization_mode %>
+    #Api enablement flags
+    #depricated
+    <%- if @apiserver_runtime_config -%>
+    - --runtime-config=<%= @apiserver_runtime_config %>
+    <%- end -%>
+    #Admission flags
+    <%- if @apiserver_admission_control_file -%>
+    - --admission-control-config-file=<%= @apiserver_admission_control_file %>
+    <%- end -%>
+    <%- if @apiserver_disable_admission_plugins -%>
+    - --disable-admission-plugins=<%= @apiserver_disable_admission_plugins %>
+    <%- end -%>
+    <%- if @apiserver_enable_admission_plugins -%>
+    - --enable-admission-plugins=<%= @apiserver_enable_admission_plugins %>
+    <%- end -%>
+    #Misc flags
+    - --allow-privileged=true
+    - --apiserver-count=<%= @apiserver_count %>
+    - --endpoint-reconciler-type=<%= @apiserver_endpoint_reconciler_type %>
+    - --kubelet-client-certificate=<%= @apiserver_kubelet_client_cert %>
+    - --kubelet-client-key=<%= @apiserver_kubelet_client_key %>
+    <%- if @apiserver_kubelet_preferred_address_types -%>
+    - --kubelet-preferred-address-types=<%= @apiserver_kubelet_preferred_address_types %>
+    <%- end -%>
+    - --service-cluster-ip-range=<%= @apiserver_service_cluster_ip_range %>
+    #Global flags
+    - --v=<%= @apiserver_verbose %>
+    # for htts need enable anonymous-auth
+    livenessProbe:
+      failureThreshold: 8
+      httpGet:
+        host: 127.0.0.1
+        path: /healthz
+        port: 8080
+        scheme: HTTP
+      initialDelaySeconds: 15
+      timeoutSeconds: 15
+    resources:
+      requests:
+        cpu: 250m
+    volumeMounts:
+    - name: usr-share-ca-certificates
+      mountPath: /usr/share/ca-certificates
+      readOnly: true
+    - mountPath: /usr/local/share/ca-certificates
+      name: usr-local-share-ca-certificates
+      readOnly: true
+    - mountPath: /etc/ca-certificates
+      name: etc-ca-certificates
+      readOnly: true
+    - name: ca-certs
+      mountPath: /etc/ssl/certs
+      readOnly: true
+    - name: k8s-certs
+      mountPath: /etc/kubernetes/pki
+      readOnly: true
+    <%- if @apiserver_audit_policy_file -%>
+    - name: audit
+      mountPath: <%= @apiserver_audit_policy_file %>
+      readOnly: true
+    - name: audit-log
+      mountPath: <%= @apiserver_audit_log_path %>
+    <%- end -%>
+  volumes:
+  - name: k8s-certs
+    hostPath:
+      path: /etc/kubernetes/pki
+      type: DirectoryOrCreate
+  - name: ca-certs
+    hostPath:
+      path: /etc/ssl/certs
+      type: DirectoryOrCreate
+  - name: usr-share-ca-certificates
+    hostPath:
+      path: /usr/share/ca-certificates
+      type: DirectoryOrCreate
+  - name: usr-local-share-ca-certificates
+    hostPath:
+      path: /usr/local/share/ca-certificates
+      type: DirectoryOrCreate
+  - name: etc-ca-certificates
+    hostPath:
+      path: /etc/ca-certificates
+      type: DirectoryOrCreate
+  <%- if @apiserver_audit_policy_file -%>
+  - name: audit
+    hostPath:
+      path: <%= @apiserver_audit_policy_file %>
+      type: File
+  - name: audit-log
+    hostPath:
+      path: <%= @apiserver_audit_log_path %>
+      type: DirectoryOrCreate
+  <%- end -%>

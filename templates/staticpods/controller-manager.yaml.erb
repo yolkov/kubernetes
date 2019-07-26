@@ -1,0 +1,124 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: ""
+  labels:
+    component: kube-controller-manager
+    tier: control-plane
+  name: kube-controller-manager
+  namespace: kube-system
+spec:
+  hostNetwork: true
+  priorityClassName: system-cluster-critical
+  containers:
+  - name: kube-controller-manager
+    image: <%= @controller_image %>:<%= @controller_version %>
+    imagePullPolicy: IfNotPresent
+    command:
+    - kube-controller-manager
+    #Generic flags
+    <%- if @controller_allocate_node_cidrs -%>
+    - --allocate-node-cidrs=true
+    - --cluster-cidr=<%= @controller_cluster_cidr %>
+      ##Nodeipam controller flags start
+    - --node-cidr-mask-size=<%= @controller_node_cidr_mask_size %>
+    <%- if @controller_service_cluster_ip_range -%>
+    - --service-cluster-ip-range=<%= @controller_service_cluster_ip_range %>
+      ##Nodeipam controller flags finish
+    <%- end -%>
+    <%- end -%>
+    - --controllers=<%= @controller_controllers  %>
+    <%- if @controller_feature_gates != [] -%>
+    - --feature-gates=<%= @controller_feature_gates.join(",") %>
+    <%- end -%>
+    - --leader-elect=true
+    - --use-service-account-credentials=<%= @controller_use_service_account_credentials  %>
+    - --node-monitor-period=<%= @controller_node_monitor_period %>
+    #Secure serving flags
+    <%- if @controller_http2_max_streams -%>
+    - --http2-max-streams-per-connection=<%= @controller_http2_max_streams %>
+    <%- end -%>
+    #Csrsigning controller flags
+    - --cluster-signing-cert-file=<%= @controller_cluster_signing_cert_file  %>
+    - --cluster-signing-key-file=<%= @controller_cluster_signing_key_file  %>
+    #Nodelifecycle controller flags
+    - --node-monitor-grace-period=<%= @controller_node_monitor_grace_period %>
+    - --pod-eviction-timeout=<%= @controller_pod_eviction_timeout %>
+    #Serviceaccount controller flags
+    - --root-ca-file=<%= @controller_root_ca_file  %>
+    - --service-account-private-key-file=<%= @controller_service_account_private_key_file %>
+    #Misc flags
+    <%- if @controller_kubeconfig -%>
+    - --kubeconfig=/etc/kubernetes/controller-manager.conf
+    <%- else -%>
+    - --master=http://127.0.0.1:8080
+    <%- end -%>
+    #Global flags
+    - --v=<%= @controller_verbose %>
+    livenessProbe:
+      failureThreshold: 8
+      httpGet:
+        host: 0.0.0.0
+        path: /healthz
+        port: 10252
+        scheme: HTTP
+      initialDelaySeconds: 15
+      timeoutSeconds: 15
+    resources:
+      requests:
+        cpu: 200m
+    volumeMounts:
+    - name: k8s-certs
+      mountPath: /etc/kubernetes/pki
+      readOnly: true
+    - name: ca-certs
+      mountPath: /etc/ssl/certs
+      readOnly: true
+    - name: usr-share-ca-certificates
+      mountPath: /usr/share/ca-certificates
+      readOnly: true
+    - name: usr-local-share-ca-certificates
+      mountPath: /usr/local/share/ca-certificates
+      readOnly: true
+    - name: etc-ca-certificates
+      mountPath: /etc/ca-certificates
+      readOnly: true
+    - name: flexvolume-dir
+      mountPath: /usr/libexec/kubernetes/kubelet-plugins/volume/exec
+    <%- if @controller_kubeconfig -%>
+    - name: kubeconfig
+      mountPath: /etc/kubernetes/controller-manager.conf
+      readOnly: true
+    <%- end -%>
+  volumes:
+  - name: k8s-certs
+    hostPath:
+      path: /etc/kubernetes/pki
+      type: DirectoryOrCreate
+  - name: ca-certs
+    hostPath:
+      path: /etc/ssl/certs
+      type: DirectoryOrCreate
+  - name: usr-share-ca-certificates
+    hostPath:
+      path: /usr/share/ca-certificates
+      type: DirectoryOrCreate
+  - name: usr-local-share-ca-certificates
+    hostPath:
+      path: /usr/local/share/ca-certificates
+      type: DirectoryOrCreate
+  - name: etc-ca-certificates
+    hostPath:
+      path: /etc/ca-certificates
+      type: DirectoryOrCreate
+  - name: flexvolume-dir
+    hostPath:
+      path: /usr/libexec/kubernetes/kubelet-plugins/volume/exec
+      type: DirectoryOrCreate
+  <%- if @controller_kubeconfig -%>
+  - name: kubeconfig
+    hostPath:
+      path: /etc/kubernetes/controller-manager.conf
+      type: FileOrCreate
+  <%- end -%>

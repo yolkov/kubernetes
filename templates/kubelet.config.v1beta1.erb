@@ -1,0 +1,84 @@
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+address: 0.0.0.0
+authentication:
+  anonymous:
+    enabled: false
+  webhook:
+    cacheTTL: 2m0s
+    enabled: true
+  x509:
+    clientCAFile: <%= scope['kubernetes::kube_ca'] %>
+authorization:
+  mode: Webhook
+  webhook:
+    cacheAuthorizedTTL: 5m0s
+    cacheUnauthorizedTTL: 30s
+cgroupDriver: <%= scope['kubernetes::kubelet_cgroup_driver'] %>
+cgroupsPerQOS: true
+clusterDNS:
+<%- scope['kubernetes::kubelet_dns_ip'].each do |ip| -%>
+- <%= ip %>
+<%- end -%>
+clusterDomain: <%= scope['kubernetes::kubelet_domain'] %>
+configMapAndSecretChangeDetectionStrategy: Watch
+containerLogMaxFiles: 5
+containerLogMaxSize: 10Mi
+contentType: application/vnd.kubernetes.protobuf
+cpuCFSQuota: true
+<%- if scope['kubernetes::kubelet_cpu_cfs_quota_period'] != '' -%>
+cpuCFSQuotaPeriod: <%= scope['kubernetes::kubelet_cpu_cfs_quota_period'] %>
+<%- end -%>
+cpuManagerPolicy: <%= scope['kubernetes::kubelet_cpu_manager_policy'] %>
+cpuManagerReconcilePeriod: 10s
+enableControllerAttachDetach: true
+enableDebuggingHandlers: true
+enforceNodeAllocatable:
+- pods
+eventBurst: 10
+eventRecordQPS: 5
+<%- unless scope['kubernetes::kubelet_eviction_hard'].empty? -%>
+evictionHard:
+<%= scope["kubernetes::kubelet_eviction_hard"].map {|k,v| "  #{k}: #{v}"}.join("\n") %>
+<%- end -%>
+evictionPressureTransitionPeriod: 5m0s
+<%- if scope['kubernetes::kubelet_feature_gates'] -%>
+<%- unless scope['kubernetes::kubelet_feature_gates'].empty? -%>
+featureGates:
+<%= scope["kubernetes::kubelet_feature_gates"].map {|k,v| "  #{k}: #{v}"}.join("\n") %>
+<%- end -%>
+<%- end -%>
+failSwapOn: true
+fileCheckFrequency: 20s
+hairpinMode: hairpin-veth
+healthzBindAddress: 127.0.0.1
+healthzPort: 10248
+httpCheckFrequency: 20s
+imageGCHighThresholdPercent: 85
+imageGCLowThresholdPercent: 80
+imageMinimumGCAge: 2m0s
+iptablesDropBit: 15
+iptablesMasqueradeBit: 14
+kubeAPIBurst: <%= scope['kubernetes::kubelet_api_burst'] %>
+kubeAPIQPS: <%= scope['kubernetes::kubelet_api_qps'] %>
+makeIPTablesUtilChains: true
+maxOpenFiles: 1000000
+maxPods: <%= scope['kubernetes::kubelet_max_pods'] %>
+nodeLeaseDurationSeconds: 40
+nodeStatusUpdateFrequency: <%= scope['kubernetes::kubelet_node_status_update_frequency'] %>
+oomScoreAdj: <%= scope['kubernetes::kubelet_oom_score_adj'] %>
+podPidsLimit: -1
+port: 10250
+registryBurst: <%= scope['kubernetes::kubelet_registry_burst'] %>
+registryPullQPS: <%= scope['kubernetes::kubelet_registry_pull_qps'] %>
+resolvConf: /etc/resolv.conf
+rotateCertificates: <%= scope['kubernetes::kubelet_rotate_certs'] %>
+runtimeRequestTimeout: 2m0s
+<%- if scope['kubernetes::server_tls_bootstrap'] -%>
+serverTLSBootstrap: <%= scope['kubernetes::server_tls_bootstrap'] %>
+<%- end -%>
+serializeImagePulls: false
+staticPodPath: /etc/kubernetes/manifests
+streamingConnectionIdleTimeout: 4h0m0s
+syncFrequency: 1m0s
+volumeStatsAggPeriod: 1m0s

@@ -1,0 +1,16 @@
+HOSTS:
+  debian9:
+    platform: d-9-x86_64
+    hypervisor: docker
+    docker_cmd: '["/usr/sbin/init"]'
+    docker_image_commands:
+      - 'apt-get install -y crontabs initscripts iproute2 openssl sysvinit-tools tar wget which ss'
+      - 'systemctl mask getty@tty1.service'
+    docker_preserve_image: true
+    mount_folders:
+      controlrepo:
+        host_path: .
+        container_path: /tmp/production
+        opts: ro
+CONFIG:
+  type: foss

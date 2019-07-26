@@ -1,0 +1,111 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: etcd
+  namespace: kube-system
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: ""
+    prometheus.io/path: /metrics
+    prometheus.io/port: "<%= scope['kubernetes::etcd_kube_clientport'] %>"
+    prometheus.io/scrape: "true"
+  labels:
+    component: etcd
+    tier: control-plane
+spec:
+    hostNetwork: true
+    priorityClassName: system-cluster-critical
+    containers:
+    - name: etcd
+      image: <%= scope['kubernetes::etcd_kube_image'] %>:<%= scope['kubernetes::etcd_kube_version'] %>
+      imagePullPolicy: IfNotPresent
+      command:
+        - etcd
+        - --name=$(NODE_NAME)
+        - --data-dir=<%= scope['kubernetes::etcd_kube_datapath']  %>
+        <%- if scope['kubernetes::etcd_kube_client_cert_auth'] then -%>
+        - --cert-file=<%= scope['kubernetes::etcd_kube_cert_file'] %>
+        - --key-file=<%= scope['kubernetes::etcd_kube_key_file'] %>
+        - --trusted-ca-file=<%= scope['kubernetes::etcd_kube_trusted_ca_file'] %>
+        - --client-cert-auth
+        - --advertise-client-urls=https://$(NODE_NAME):<%= scope['kubernetes::etcd_kube_clientport'] %>
+        - --listen-client-urls=https://$(POD_IP):<%= scope['kubernetes::etcd_kube_clientport'] %>,http://127.0.0.1:<%= scope['kubernetes::etcd_kube_clientport'] %>
+        <%- else -%>
+        - --advertise-client-urls=http://$(NODE_NAME):<%= scope['kubernetes::etcd_kube_clientport'] %>
+        - --listen-client-urls=http://0.0.0.0:<%= scope['kubernetes::etcd_kube_clientport'] %>
+        <%- end -%>
+        <%- if scope['kubernetes::etcd_kube_peer_client_cert_auth'] then -%>
+        - --peer-cert-file=<%= scope['kubernetes::etcd_kube_peer_cert_file'] %>
+        - --peer-key-file=<%= scope['kubernetes::etcd_kube_peer_key_file'] %>
+        - --peer-trusted-ca-file=<%= scope['kubernetes::etcd_kube_peer_trusted_ca_file'] %>
+        - --peer-client-cert-auth
+        - --initial-advertise-peer-urls=https://$(NODE_NAME):<%= scope['kubernetes::etcd_kube_peerport'] %>
+        - --listen-peer-urls=https://$(POD_IP):<%= scope['kubernetes::etcd_kube_peerport'] %>,http://127.0.0.1:<%= scope['kubernetes::etcd_kube_peerport'] %>
+        <%- else -%>
+        - --initial-advertise-peer-urls=http://$(NODE_NAME):<%= scope['kubernetes::etcd_kube_peerport'] %>
+        - --listen-peer-urls=http://0.0.0.0:<%= scope['kubernetes::etcd_kube_peerport'] %>
+        <%- end -%>
+        <%- if scope['kubernetes::etcd_kube_cluster_token'] then -%>
+        - --initial-cluster=<%= scope['kubernetes::etcd_kube_cluster'] %>
+        - --initial-cluster-token=<%= scope['kubernetes::etcd_kube_cluster_token'] %>
+        - --initial-cluster-state=<%= scope['kubernetes::etcd_kube_initial_cluster_state'] %>
+        - --heartbeat-interval=<%= scope['kubernetes::etcd_kube_heartbeat_interval'] %>
+        - --election-timeout=<%= scope['kubernetes::etcd_kube_election_timeout'] %>
+        <%- end -%>
+        - --snapshot-count=<%= scope['kubernetes::etcd_kube_snapshot_count'] %>
+      livenessProbe:
+        #exec:
+        #  command:
+        #  - /bin/sh
+        #  - -ec
+        #  - ETCDCTL_API=3 etcdctl --endpoints=https://[127.0.0.1]:2379 --cacert=/etc/kubernetes/pki/etcd/ca.crt
+        #    --cert=/etc/kubernetes/pki/etcd/healthcheck-client.crt --key=/etc/kubernetes/pki/etcd/healthcheck-client.key
+        #    get foo
+        httpGet:
+          host: 127.0.0.1
+          port: <%= scope['kubernetes::etcd_kube_clientport'] %>
+          path: "/health"
+        failureThreshold: 8
+        initialDelaySeconds: 15
+        timeoutSeconds: 15
+      env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+#        - name: PUBLIC_IP
+#        valueFrom:
+#            fieldRef:
+#            fieldPath: status.hostIP
+#        - name: PRIVATE_IP
+#        valueFrom:
+#            fieldRef:
+#            fieldPath: status.podIP
+#        - name: PEER_NAME
+#        valueFrom:
+#            fieldRef:
+#            fieldPath: metadata.name
+      ports:
+        - name: client<%= scope['kubernetes::etcd_kube_postfix'] %>
+          containerPort: <%= scope['kubernetes::etcd_kube_clientport'] %>
+          hostPort: <%= scope['kubernetes::etcd_kube_clientport'] %>
+        - name: peer<%= scope['kubernetes::etcd_kube_postfix'] %>
+          containerPort: <%= scope['kubernetes::etcd_kube_peerport'] %>
+          hostPort: <%= scope['kubernetes::etcd_kube_peerport'] %>
+      volumeMounts:
+        - name: etcd-data-<%= scope['kubernetes::etcd_kube_postfix'] %>
+          mountPath: <%= scope['kubernetes::etcd_kube_datapath'] %>
+        - name: etcd-certs
+          mountPath: <%= scope['kubernetes::etcd_kube_pki_path'] %>
+          readOnly: true
+    volumes:
+      - name: etcd-certs
+        hostPath:
+          path: <%= scope['kubernetes::etcd_kube_pki_path'] %>
+      - name: etcd-data-<%= scope['kubernetes::etcd_kube_postfix'] %>
+        hostPath:
+          path: <%= scope['kubernetes::etcd_kube_datapath'] %>

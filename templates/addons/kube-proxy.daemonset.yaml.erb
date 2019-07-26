@@ -1,0 +1,71 @@
+apiVersion: extensions/v1beta1
+#apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    k8s-app: kube-proxy
+    addonmanager.kubernetes.io/mode: Reconcile
+  name: kube-proxy
+  namespace: kube-system
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      k8s-app: kube-proxy
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+      labels:
+        k8s-app: kube-proxy
+    spec:
+      hostNetwork: true
+      priorityClassName: system-node-critical
+      containers:
+      - name: kube-proxy
+        image: <%= @image %>:<%= @version %>
+        imagePullPolicy: IfNotPresent
+        command:
+        - /usr/local/bin/kube-proxy
+        - --config=/var/lib/kube-proxy/config.conf
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /var/lib/kube-proxy
+          name: kube-proxy
+        - mountPath: /run/xtables.lock
+          name: xtables-lock
+        - mountPath: /lib/modules
+          name: lib-modules
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        beta.kubernetes.io/arch: amd64
+      restartPolicy: Always
+      serviceAccount: kube-proxy
+      serviceAccountName: kube-proxy
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+      - operator: Exists
+      volumes:
+      - name: kube-proxy
+        configMap:
+          defaultMode: 420
+          name: kube-proxy
+      - name: xtables-lock
+        hostPath:
+          path: /run/xtables.lock
+          type: FileOrCreate
+      - name: lib-modules
+        hostPath:
+          path: /lib/modules
+  updateStrategy:
+    <%- if @update_strategy == 'OnDelete' -%>
+    type: OnDelete
+    <%- else -%>
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
+    <%- end -%>

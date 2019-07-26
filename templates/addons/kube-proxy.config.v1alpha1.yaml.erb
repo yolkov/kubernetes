@@ -1,0 +1,69 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  labels:
+    app: kube-proxy
+    addonmanager.kubernetes.io/mode: Reconcile
+  name: kube-proxy
+  namespace: kube-system
+data:
+  config.conf: |-
+    kind: KubeProxyConfiguration
+    apiVersion: kubeproxy.config.k8s.io/v1alpha1
+    bindAddress: 0.0.0.0
+    clientConnection:
+      acceptContentTypes: ""
+      burst: <%= @burst %>
+      contentType: application/vnd.kubernetes.protobuf
+      kubeconfig: /var/lib/kube-proxy/kubeconfig.conf
+      qps: <%= @qps %>
+    clusterCIDR: <%= @cluster_cidr %>
+    configSyncPeriod: 15m0s
+    conntrack:
+      max: null
+      maxPerCore: <%= @conntrack_max_per_core %>
+      min: <%= @conntrack_min %>
+      tcpCloseWaitTimeout: <%= @conntrack_tcp_timeout_close_wait %>
+      tcpEstablishedTimeout: <%= @conntrack_tcp_timeout_established %>
+    enableProfiling: false
+    featureGates:
+    <%- 1 %><%= @feature_gates.map {|k,v| "      #{k}: #{v}"}.join("\n") %>
+    healthzBindAddress: 0.0.0.0:10256
+    hostnameOverride: ""
+    iptables:
+      masqueradeAll: false
+      masqueradeBit: 14
+      minSyncPeriod: 0s
+      syncPeriod: 30s
+    ipvs:
+      excludeCIDRs: <%= @ipvs_exclude_cidr %>
+      minSyncPeriod: 0s
+      scheduler: ""
+      syncPeriod: 30s
+    metricsBindAddress: 127.0.0.1:10249
+    mode: <%= @mode %>
+    nodePortAddresses: null
+    oomScoreAdj: <%= @oom_score_adj %>
+    portRange: ""
+    resourceContainer: /kube-proxy
+    udpIdleTimeout: 250ms
+  kubeconfig.conf: |-
+    apiVersion: v1
+    kind: Config
+    clusters:
+    - cluster:
+        certificate-authority: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        server: <%= @apiserver %>
+      name: default
+    contexts:
+    - context:
+        cluster: default
+        namespace: default
+        user: default
+      name: default
+    current-context: default
+    users:
+    - name: default
+      user:
+        tokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+

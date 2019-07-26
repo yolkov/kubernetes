@@ -1,0 +1,307 @@
+---
+# 'https://kube-api-clustername:8443' 'https://kube-api-clustername-balanced:8443'
+kubernetes::kube_apiserver: http://127.0.0.1:8080
+kubernetes::kube_cluster: cluster
+# 'zone, e.q. kube'
+kubernetes::kube_cluster_zone: local
+# '1.13.3'
+kubernetes::kube_version: ~
+kubernetes::kube_dns: ~
+kubernetes::kube_image_prefix: v
+kubernetes::kube_pki_path: /etc/kubernetes/pki
+kubernetes::kube_ca: /etc/kubernetes/pki/ca.crt
+kubernetes::kube_package_postfix: '00'
+kubernetes::kube_master: false
+kubernetes::service_cluster_ip_range: ~
+kubernetes::cluster_cidr: ~
+kubernetes::controller_allocate_node_cidrs: false
+kubernetes::node_cidr_mask_size: 27
+kubernetes::apiserver_etcd_servers: http://127.0.0.1:2379 # 'https://etcd-api-dev1:2379,https://etcd-api-dev2:2379,https://etcd-api-dev3:2379'
+kubernetes::token_id: ~
+kubernetes::token_secret: ~
+
+kubernetes::container_runtime: docker
+#'docker-engine'
+kubernetes::docker_package_name: docker.io
+#'installed' # 17.12.1-0ubuntu1
+kubernetes::docker_version: 17.12.1-0ubuntu1
+kubernetes::docker_daemon_options:
+  live-restore: true
+  log-driver: json-file
+  iptables: false
+  ip-masq: false
+  bridge: none
+  log-opts:
+    max-size: "256m"
+    max-file: "4"
+  #storage-driver: overlay2
+
+# 0.6.0-00
+kubernetes::kubernetes_cni_version: present
+
+#/var/lib/kubelet/.dockercfg
+kubernetes::kubelet_config_json: /var/lib/kubelet/config.json
+kubernetes::kubelet_config_version: v1beta1
+kubernetes::kubelet_package_manage: true
+kubernetes::kubelet_domain: "%{lookup('kubernetes::kube_cluster')}.%{lookup('kubernetes::kube_cluster_zone')}"
+# "${kube_dns_ip}" #???
+kubernetes::kubelet_dns_ip: ~
+kubernetes::kubelet_node_ip: ~
+kubernetes::kubelet_cgroup_driver: cgroupfs
+kubernetes::kubelet_cpu_cfs_quota_period: 100ms
+kubernetes::kubelet_cpu_manager_policy: none
+kubernetes::kubelet_api_burst: 10
+kubernetes::kubelet_api_qps: 5
+kubernetes::kubelet_registry_burst: 10
+kubernetes::kubelet_registry_pull_qps: 5
+#kubernetes::kubelet_tls_cert_file: undef #"${kube_sslpath}/server-fqdn.crt"
+#kubernetes::kubelet_tls_key_file: undef #"${kube_sslpath}/server-fqdn.key"
+#kubernetes::kubelet_client_ca_file: undef # "kube-${kube_cluster}-worker-ca.crt"
+#kubernetes::kubelet_disable_readonly_port: false
+kubernetes::kubelet_max_pods: 60
+kubernetes::kubelet_node_status_update_frequency: 10s
+kubernetes::kubelet_verbose: 2
+kubernetes::kubelet_oom_score_adj: -999
+kubernetes::kubelet_eviction_hard:
+  imagefs.available: 15%
+  memory.available: 100Mi
+  nodefs.available: 10%
+  nodefs.inodesFree: 5%
+#{} - no work
+kubernetes::kubelet_feature_gates: ~
+#kubernetes::kubelet_eviction_soft: undef # —
+#kubernetes::kubelet_eviction_soft_grace_period: undef # —
+#kubernetes::kubelet_eviction_max_pod_grace_period: undef # –
+#kubernetes::kubelet_eviction_minimum_reclaim: undef # 0
+#kubernetes::kubelet_eviction_pressure_transition_period: undef # 5m0s
+#kubernetes::kubelet_system_reserved: undef # cpu=200m,memory=500Mi
+kubernetes::kubelet_rotate_certs: true
+kubernetes::server_tls_bootstrap: false
+kubernetes::kubelet_register_with_taints:
+  - "node-role.kubernetes.io/maintenance='':NoSchedule"
+kubernetes::kubelet_node_labels: ~
+kubernetes::kubelet_registry_auth: {}
+kubernetes::kubelet_allowed_unsafe_sysctls: ~
+
+kubernetes::kubelet_kubeconfig: /etc/kubernetes/kubelet.conf
+#"system:node:${::hostname}"
+kubernetes::kubelet_kubeconfig_user: "system:node:%{facts.hostname}"
+kubernetes::kubelet_kubeconfig_token: ~
+# "kube-${kube_cluster}-api-kubelet-c.crt"
+kubernetes::kubelet_kubeconfig_crt: '/var/lib/kubelet/pki/kubelet-client.crt'
+# "kube-${kube_cluster}-api-kubelet-c.key"
+kubernetes::kubelet_kubeconfig_key: '/var/lib/kubelet/pki/kubelet-client.key'
+
+kubernetes::kubelet_kubeconfig_bootstrap: /etc/kubernetes/bootstrap-kubelet.conf
+
+kubernetes::controller_kubeconfig: "true"
+kubernetes::controller_kubeconfig_crt: '/etc/kubernetes/pki/kube-controller-manager.crt'
+kubernetes::controller_kubeconfig_key: '/etc/kubernetes/pki/kube-controller-manager.key'
+
+kubernetes::scheduler_kubeconfig: true
+kubernetes::scheduler_kubeconfig_crt: '/etc/kubernetes/pki/kube-scheduler.crt'
+kubernetes::scheduler_kubeconfig_key: '/etc/kubernetes/pki/kube-scheduler.key'
+
+###kubernetes::proxy_via: undef #haproxy
+
+#kubeproxy
+kubernetes::kubeproxy::image: k8s.gcr.io/kube-proxy-amd64
+kubernetes::kubeproxy::version: "%{scope('kubernetes::kube_image_prefix')}%{scope('kubernetes::kube_version')}"
+kubernetes::kubeproxy::hash: ~
+kubernetes::kubeproxy::type: daemonset
+#1.11.x - v1alpha1 | 1.12.x - v1alpha3 | 1.13+ v1beta1
+kubernetes::kubeproxy::config_version: v1alpha1
+kubernetes::kubeproxy::kubeconfig: /etc/kubernetes/kube-proxy.conf
+kubernetes::kubeproxy::kubeconfig_user: 'system:kube-proxy'
+kubernetes::kubeproxy::kubeconfig_token: ~
+kubernetes::kubeproxy::kubeconfig_crt: ~
+kubernetes::kubeproxy::kubeconfig_key: ~
+
+kubernetes::kubeproxy::mode: ipvs
+kubernetes::kubeproxy::oom_score_adj: -999
+kubernetes::kubeproxy::metrics_bind_address: ~
+kubernetes::kubeproxy::conntrack_max_per_core: 32768
+kubernetes::kubeproxy::conntrack_min: 131072
+kubernetes::kubeproxy::conntrack_tcp_timeout_close_wait: 1h0m0s
+kubernetes::kubeproxy::conntrack_tcp_timeout_established: 24h0m0s
+kubernetes::kubeproxy::burst: 10
+kubernetes::kubeproxy::qps: 5
+kubernetes::kubeproxy::feature_gates:
+  SupportIPVSProxyMode: true
+#kubernetes::kubeproxy::cluster_cidr: ""
+kubernetes::kubeproxy::ipvs_exclude_cidr: "null"
+kubernetes::kubeproxy::update_strategy: RollingUpdate
+
+###apiserver
+kubernetes::control_plane::apiserver_image: k8s.gcr.io/kube-apiserver-amd64
+kubernetes::control_plane::apiserver_version: "%{scope('kubernetes::kube_image_prefix')}%{scope('kubernetes::kube_version')}"
+#generic flags
+kubernetes::control_plane::apiserver_advertise_address: "%{facts.ipaddress}"
+kubernetes::control_plane::apiserver_feature_gates: []
+kubernetes::control_plane::apiserver_max_requests_inflight: ~
+kubernetes::control_plane::apiserver_target_ram_mb: ~
+#Etcd flags
+kubernetes::control_plane::apiserver_etcd_cafile: /etc/kubernetes/pki/etcd/ca.crt
+kubernetes::control_plane::apiserver_etcd_certfile: /etc/kubernetes/pki/etcd/client.crt
+kubernetes::control_plane::apiserver_etcd_keyfile: /etc/kubernetes/pki/etcd/client.key
+#Secure serving flags
+kubernetes::control_plane::apiserver_bind_address: ~
+kubernetes::control_plane::apiserver_http2_max_streams: ~
+kubernetes::control_plane::apiserver_secure_port: 6443
+kubernetes::control_plane::apiserver_tls_cert_file: /etc/kubernetes/pki/apiserver.crt
+kubernetes::control_plane::apiserver_tls_private_key_file: /etc/kubernetes/pki/apiserver.key
+#Insecure serving flags
+kubernetes::control_plane::apiserver_insecure_port: 8080
+#Auditing flags
+kubernetes::control_plane::apiserver_audit_log_batch_buffer_size: 10000
+kubernetes::control_plane::apiserver_audit_log_batch_max_size: 400
+kubernetes::control_plane::apiserver_audit_log_batch_max_wait: ~
+kubernetes::control_plane::apiserver_audit_log_maxage: 3
+kubernetes::control_plane::apiserver_audit_log_maxsize: 500
+kubernetes::control_plane::apiserver_audit_log_path: /var/log/kubernetes
+kubernetes::control_plane::apiserver_audit_log_mode: batch
+kubernetes::control_plane::apiserver_audit_policy_file: /etc/kubernetes/audit/policy.yaml
+#Features flags
+kubernetes::control_plane::apiserver_profiling: false
+kubernetes::control_plane::apiserver_swagger_ui: false
+#Authentication flags
+kubernetes::control_plane::apiserver_anonymous_auth: false
+kubernetes::control_plane::apiserver_client_ca_file: /etc/kubernetes/pki/ca.crt
+kubernetes::control_plane::apiserver_bootstrap_token_auth: true
+kubernetes::control_plane::apiserver_oidc_ca_file: ~
+kubernetes::control_plane::apiserver_oidc_client_id: 'k8s'
+kubernetes::control_plane::apiserver_oidc_groups_claim: 'groups'
+kubernetes::control_plane::apiserver_oidc_issuer_url: ~
+kubernetes::control_plane::apiserver_oidc_username_claim: 'name'
+kubernetes::control_plane::apiserver_service_account_key_files: [ '/etc/kubernetes/pki/sa.pub' ]
+#Authorization flags
+kubernetes::control_plane::apiserver_authorization_mode: 'Node,RBAC'
+#Api enablement flags
+kubernetes::control_plane::apiserver_runtime_config: ~ # 'extensions/v1beta1=true,extensions/v1beta1/thirdpartyresources=true,batch/v2alpha1=true'
+#Admission flags
+kubernetes::control_plane::apiserver_admission_control_file: ~
+kubernetes::control_plane::apiserver_disable_admission_plugins: PersistentVolumeLabel
+kubernetes::control_plane::apiserver_enable_admission_plugins: NodeRestriction,NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota
+#Misc flags
+kubernetes::control_plane::apiserver_count: 1
+kubernetes::control_plane::apiserver_endpoint_reconciler_type: lease
+kubernetes::control_plane::apiserver_kubelet_ca: /etc/kubernetes/pki/ca.crt
+kubernetes::control_plane::apiserver_kubelet_client_cert: /etc/kubernetes/pki/apiserver-kubelet-client.crt
+kubernetes::control_plane::apiserver_kubelet_client_key: /etc/kubernetes/pki/apiserver-kubelet-client.key
+kubernetes::control_plane::apiserver_kubelet_preferred_address_types: ~ #InternalIP,ExternalIP,Hostname
+#Global flags
+kubernetes::control_plane::apiserver_verbose: 2
+
+###controller-manager
+kubernetes::control_plane::controller_image: k8s.gcr.io/kube-controller-manager-amd64
+kubernetes::control_plane::controller_version: "%{scope('kubernetes::kube_image_prefix')}%{scope('kubernetes::kube_version')}"
+kubernetes::control_plane::controller_service_cluster_ip_range: ~
+kubernetes::control_plane::controller_cluster_signing_cert_file: /etc/kubernetes/pki/ca.crt
+kubernetes::control_plane::controller_cluster_signing_key_file: /etc/kubernetes/pki/ca.key
+kubernetes::control_plane::controller_controllers: "*,bootstrapsigner,tokencleaner"
+kubernetes::control_plane::controller_feature_gates: []
+kubernetes::control_plane::controller_root_ca_file: /etc/kubernetes/pki/ca.crt
+kubernetes::control_plane::controller_service_account_private_key_file: /etc/kubernetes/pki/sa.key
+kubernetes::control_plane::controller_use_service_account_credentials: true
+kubernetes::control_plane::controller_node_monitor_period: 5s
+kubernetes::control_plane::controller_node_monitor_grace_period: 40s
+kubernetes::control_plane::controller_pod_eviction_timeout: 5m0s
+kubernetes::control_plane::controller_http2_max_streams: ~
+kubernetes::control_plane::controller_verbose: 2
+
+#scheduler
+kubernetes::control_plane::scheduler_image: k8s.gcr.io/kube-scheduler-amd64
+kubernetes::control_plane::scheduler_version: "%{scope('kubernetes::kube_image_prefix')}%{scope('kubernetes::kube_version')}"
+kubernetes::control_plane::scheduler_feature_gates: []
+kubernetes::control_plane::scheduler_http2_max_streams: ~
+kubernetes::control_plane::scheduler_verbose: 2
+
+#addon-manager
+kubernetes::control_plane::addon_manager_enable: true
+kubernetes::control_plane::addon_manager_image: k8s.gcr.io/kube-addon-manager
+kubernetes::control_plane::addon_manager_version: v8.9
+kubernetes::control_plane::addon_manager_check_interval: 15
+kubernetes::control_plane::addon_manager_extra_prune_whitelist: "core/v1/ServiceAccount rbac.authorization.k8s.io/v1/ClusterRole rbac.authorization.k8s.io/v1/ClusterRoleBinding"
+
+
+
+
+
+kubernetes::etcd_kube_type: staticpod
+kubernetes::etcd_kube_version: 3.2.24
+kubernetes::etcd_kube_image: k8s.gcr.io/etcd
+kubernetes::etcd_kube_datapath: /var/lib/etcd-kube
+kubernetes::etcd_kube_pki_path: /etc/kubernetes/pki/etcd
+kubernetes::etcd_kube_postfix: kube
+kubernetes::etcd_kube_clientport: 2379
+kubernetes::etcd_kube_peerport: 2380
+kubernetes::etcd_kube_client_cert_auth: false
+kubernetes::etcd_kube_key_file: /etc/kubernetes/pki/etcd/server.key
+kubernetes::etcd_kube_cert_file: /etc/kubernetes/pki/etcd/server.crt
+kubernetes::etcd_kube_trusted_ca_file: /etc/kubernetes/pki/etcd/ca.crt
+kubernetes::etcd_kube_peer_client_cert_auth: false
+kubernetes::etcd_kube_peer_key_file: /etc/kubernetes/pki/etcd/peer.key
+kubernetes::etcd_kube_peer_cert_file: /etc/kubernetes/pki/etcd/peer.crt
+kubernetes::etcd_kube_peer_trusted_ca_file: /etc/kubernetes/pki/etcd/ca.crt
+kubernetes::etcd_kube_cluster: ~
+kubernetes::etcd_kube_cluster_token: ~
+kubernetes::etcd_kube_initial_cluster_state: new
+kubernetes::etcd_kube_heartbeat_interval: 500
+kubernetes::etcd_kube_election_timeout: 2500
+kubernetes::etcd_kube_snapshot_count: 10000
+kubernetes::etcd_kube_peer_name: ~
+
+
+kubernetes::networking_model: calico
+kubernetes::calico::type: daemonset
+kubernetes::calico::manifest_template: kubernetes/addons/calico/kdd/calico_3.2.yaml.erb
+kubernetes::calico::version: v3.2.3
+kubernetes::calico::image: calico/node
+kubernetes::calico::image_cni: calico/cni
+kubernetes::calico::backend: bird
+kubernetes::calico::mtu: 1440
+kubernetes::calico::update_strategy: OnDelete 
+kubernetes::calico::datastore_type: kubernetes
+kubernetes::calico::as: ~
+kubernetes::calico::roiter_id: ~
+kubernetes::calico::advertise_cluster_ips: ~
+#can-reach=10.20.16.1
+#10.20.48.1 
+kubernetes::calico::ip_autodetection_method: ~
+kubernetes::calico::ipv4pool_cidr: ~
+kubernetes::calico::felix_prometheusmetricsenabled: true
+kubernetes::calico::felix_prometheusgometricsenabled: true
+kubernetes::calico::bgp_configuration_template: kubernetes/calico_bgp_configuration.yaml.erb
+kubernetes::calico::mesh_enabled: true
+kubernetes::calico::route_reflector_ips: []
+kubernetes::calico::global_bgp_peer_template: kubernetes/calico_global_bgp_peer.yaml.erb
+
+
+
+kubernetes::client::kubectl_package: true
+kubernetes::client::kubectl_binary: ~ #"%{scope('kubernetes::kube_image_prefix')}%{scope('kubernetes::kube_version')}"
+kubernetes::client::kubectl_hash: ~
+#v3.2.3
+kubernetes::client::calicoctl_binary: "%{lookup('kubernetes::calico::version')}"
+kubernetes::client::calicoctl_hash: 3396ee93361726eede85e3f86b256c80bf8d9d95e6ec37b6573fb44e7bf64e2f
+
+kubernetes::coredns_type: addon
+kubernetes::coredns_image: coredns/coredns
+kubernetes::coredns_version: 1.2.2
+kubernetes::coredns_replicas: 2
+kubernetes::coredns_config: |+
+    .:53 {
+        errors
+        health
+        kubernetes cluster.local in-addr.arpa ip6.arpa {
+           pods insecure
+           upstream
+           fallthrough in-addr.arpa ip6.arpa
+        }
+        prometheus :9153
+        proxy . /etc/resolv.conf
+        cache 30
+        reload
+    }
+
+

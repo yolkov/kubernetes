@@ -1,0 +1,5 @@
+export ETCDCTL_API=3
+export ETCDCTL_CACERT=<%= scope['kubernetes::control_plane::apiserver_etcd_cafile'] %>
+export ETCDCTL_CERT=<%= scope['kubernetes::control_plane::apiserver_etcd_certfile'] %>
+export ETCDCTL_KEY=<%= scope['kubernetes::control_plane::apiserver_etcd_keyfile'] %>
+export ETCDCTL_ENDPOINTS=<%= scope['kubernetes::apiserver_etcd_servers'] %>
